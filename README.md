@@ -28,7 +28,3 @@ This tool was developed **solely for educational, research, and security auditin
 The goal of this project is to help system administrators identify vulnerabilities and secure their own servers. Using this tool against infrastructures or networks without prior and explicit authorization from the owner is illegal. The developer assumes no liability and is not responsible for any misuse or damage caused by this software.
 
 ---
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more information.

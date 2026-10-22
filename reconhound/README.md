@@ -119,6 +119,3 @@ Launch with any of these to preload the form (the scan is never started automati
 
 reconHound runs a small HTTP server bound to `127.0.0.1` only (never reachable from the network) and loads its UI into a native WebKit/WebView2 window pointed at that local address. The Go backend does the actual scanning — a worker pool of goroutines dials each `ip:port`, and for open ports optionally fetches the `/` response (for the `Server` header) and each configured resource path, caching the response body (up to 1 MiB per resource) so "View resource" and "Save resource" don't need to hit the target again. Results stream to the window live via Server-Sent Events.
 
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more information.
