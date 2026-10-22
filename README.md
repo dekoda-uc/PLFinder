@@ -25,6 +25,3 @@ To start the application:
 
 This tool was developed **solely for educational, research, and security auditing purposes**. 
 
-The goal of this project is to help system administrators identify vulnerabilities and secure their own servers. Using this tool against infrastructures or networks without prior and explicit authorization from the owner is illegal. The developer assumes no liability and is not responsible for any misuse or damage caused by this software.
-
----
