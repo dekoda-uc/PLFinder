@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>reconHound</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <h1>reconHound <span class="sub">IP range / port / HTTP server scanner</span></h1>
+
+  <div class="panel config">
+    <div class="row">
+      <div class="field grow">
+        <label>Ranges <span class="hint">(one per line: CIDR, range or single IP)</span></label>
+        <textarea id="ranges" rows="4" placeholder="192.168.1.0/24&#10;10.0.0.1-10.0.0.50&#10;8.8.8.8"></textarea>
+      </div>
+      <div class="field grow">
+        <label>Ports <span class="hint">(80,443,8000-8010)</span></label>
+        <textarea id="ports" rows="4" placeholder="80,443,8080">80,443</textarea>
+      </div>
+      <div class="field narrow">
+        <label>Connections</label>
+        <input id="connections" type="number" value="400" min="1">
+        <label>Timeout (s)</label>
+        <input id="timeout" type="number" value="4" min="1">
+        <label>Scheme</label>
+        <select id="scheme">
+          <option value="http" selected>http</option>
+          <option value="https">https</option>
+          <option value="both">both</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field grow">
+        <label>Server match <span class="hint">(substring, e.g.: nginx)</span></label>
+        <input id="match" type="text" placeholder="nginx">
+      </div>
+      <div class="field grow">
+        <label>Resources to check <span class="hint">(/hello.txt,/hello.html)</span></label>
+        <input id="resources" type="text" placeholder="/hello.txt,/hello.html">
+      </div>
+      <div class="field narrow">
+        <label>OK codes</label>
+        <input id="okCodes" type="text" value="200">
+        <label class="checkbox-label"><input id="tcpOnly" type="checkbox"> TCP only (no HTTP)</label>
+      </div>
+    </div>
+    <div class="row buttons-row">
+      <button id="btnStart" class="btn btn-start">Start search</button>
+      <button id="btnPause" class="btn btn-pause" disabled>Pause</button>
+      <button id="btnStop" class="btn btn-stop" disabled>Stop</button>
+      <span id="statusBadge" class="badge badge-idle">Stopped</span>
+      <span class="stats">
+        Scanned: <b id="statScanned">0</b><span id="statTotalWrap"> / <b id="statTotal">0</b></span> ·
+        Open: <b id="statOpen">0</b> ·
+        Matches: <b id="statMatches">0</b> ·
+        Time: <b id="statElapsed">0s</b>
+      </span>
+    </div>
+    <div class="row progress-row">
+      <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+      <span class="current-target">Scanning: <b id="statCurrent">—</b></span>
+    </div>
+  </div>
+
+  <div class="panel results">
+    <div class="results-header" role="row">
+      <div class="rcell"><input id="selAll" type="checkbox" title="Select all"></div>
+      <div class="rcell">IP</div>
+      <div class="rcell">Port</div>
+      <div class="rcell">Scheme</div>
+      <div class="rcell">Http-Server</div>
+      <div class="rcell">Match</div>
+      <div class="rcell">Resources</div>
+    </div>
+    <div class="results-scroll">
+      <div id="resultsBody"></div>
+      <div id="emptyMsg" class="empty-msg">No results yet. Configure the scan and click "Start search".</div>
+    </div>
+  </div>
+
+  <div class="panel actions">
+    <div class="scope">
+      <label><input type="radio" name="scope" value="all" checked> All IPs</label>
+      <label><input type="radio" name="scope" value="selected"> Selected</label>
+    </div>
+    <button id="btnSave" class="btn">Save CSV...</button>
+    <button id="btnSaveResource" class="btn">Save resource</button>
+    <button id="btnCopy" class="btn">Copy selected</button>
+    <span id="toast" class="toast"></span>
+  </div>
+
+  <div id="resourceModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <span id="modalTitle">Resource</span>
+        <div class="modal-header-actions">
+          <button id="modalSave" class="btn btn-small">Save this file</button>
+          <button id="modalClose" class="btn btn-small">Close</button>
+        </div>
+      </div>
+      <div id="modalMeta" class="modal-meta"></div>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+<script src="/app.js"></script>
+</body>
+</html>
