@@ -18,7 +18,6 @@ reconHound sweeps CIDR blocks or IP ranges across a list of ports, fingerprints 
 - **View & save what you found** — click "View resource" to see the actual response body as code (JSON/HTML/TXT, detected automatically) right inside the window; "Save resource" exports the real files (not just metadata) as a `.zip`, for whichever rows you select — only resources that actually returned an OK status get included.
 - **Live progress** — current scan target, a progress bar, and running counters (scanned / open / matches), updating in real time over Server-Sent Events.
 - **Pause / resume / stop** — without losing results already found.
-- **CSV export** — the full results table, all rows or just the ones you select.
 - **Command-line preloading** — launch with `-ranges`, `-ports`, and friends to open the window with the form already filled in, ready to hit "Start search". See [Command-line flags](#command-line-flags).
 
 ## Quick start
@@ -120,14 +119,6 @@ Launch with any of these to preload the form (the scan is never started automati
 
 reconHound runs a small HTTP server bound to `127.0.0.1` only (never reachable from the network) and loads its UI into a native WebKit/WebView2 window pointed at that local address. The Go backend does the actual scanning — a worker pool of goroutines dials each `ip:port`, and for open ports optionally fetches the `/` response (for the `Server` header) and each configured resource path, caching the response body (up to 1 MiB per resource) so "View resource" and "Save resource" don't need to hit the target again. Results stream to the window live via Server-Sent Events.
 
-## Project structure
-
-```
-main.go                       — HTTP server + scan engine + native window
-web/index.html, style.css, app.js  — UI (embedded into the binary via go:embed)
-linux-pkgconfig-shim.sh        — helper for Linux systems with only webkit2gtk-4.1
-```
-
 ## License
 
-_Add your preferred license here (MIT, Apache-2.0, GPL-3.0, etc.) before publishing._
+This project is licensed under the MIT License. See the `LICENSE` file for more information.

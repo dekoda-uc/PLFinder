@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PLfinder Astra</title>
+    <style>
+        :root {
+            --bg-color: #f4f5f7;
+            --panel-bg: #ffffff;
+            --border-color: #dcdfe6;
+            --text-color: #333333;
+            --text-muted: #666666;
+            --primary-blue: #1d6bcd;
+            --primary-hover: #1555a6;
+            --btn-disabled: #e4e7ed;
+            --console-bg: #1e1e1e;
+            --console-text: #00ff66;
+            --console-muted: #a0a0a0;
+            --console-error: #ff5555;
+            --telegram-color: #24A1DE;
+            --telegram-hover: #1d82b3;
+            --github-bg: #24292e;
+            --github-hover: #1b1f23;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 13px;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 12px;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 14px 16px;
+        }
+
+        .top-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        label {
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            outline: none;
+            background: #fff;
+            color: #111;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-blue);
+        }
+
+        .btn {
+            padding: 6px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            background: #ffffff;
+            color: var(--text-color);
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: #f0f2f5;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: #ffffff;
+            border-color: var(--primary-blue);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+
+        /* Estilos para el botón de Telegram */
+        .btn-telegram {
+            background: var(--telegram-color);
+            color: #ffffff;
+            border-color: var(--telegram-color);
+        }
+
+        .btn-telegram:hover {
+            background: var(--telegram-hover);
+            border-color: var(--telegram-hover);
+        }
+
+        /* Estilos para el botón de GitHub */
+        .btn-github {
+            background: var(--github-bg);
+            color: #ffffff;
+            border-color: var(--github-bg);
+        }
+
+        .btn-github:hover {
+            background: var(--github-hover);
+            border-color: var(--github-hover);
+        }
+
+        .btn:disabled {
+            background: var(--btn-disabled);
+            color: #a8abb2;
+            cursor: not-allowed;
+            border-color: var(--border-color);
+        }
+
+        .icon {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        /* Spinner de carga */
+        .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Consola de ejecución */
+        .console-container {
+            margin-top: 12px;
+            background: var(--console-bg);
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px;
+            height: 160px;
+            overflow-y: auto;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .log-line {
+            margin: 2px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-info { color: var(--console-muted); }
+        .log-cmd { color: #569cd6; font-weight: bold; }
+        .log-success { color: var(--console-text); }
+        .log-error { color: var(--console-error); }
+
+        .footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="panel">
+        <div class="top-bar">
+            <div class="input-group">
+                <label for="target">Target:</label>
+                <input type="text" id="target" placeholder="127.0.0.1:8000" value="">
+            </div>
+
+            <button id="btn-submit" class="btn btn-primary" onclick="startScan()">Submit</button>
+
+            <!-- Botón para subir M3U -->
+            <input type="file" id="m3u-file-input" accept=".m3u,.m3u8" style="display: none;" onchange="handleM3UUpload(event)">
+            <button id="btn-upload" class="btn" onclick="document.getElementById('m3u-file-input').click()">Upload M3U</button>
+        </div>
+
+        <!-- Consola de ejecución -->
+        <div class="console-container" id="console">
+            <div class="log-line log-info">[Ready] Waiting for command to start...</div>
+        </div>
+    </div>
+
+    <!-- Pie de página con enlaces a Telegram y GitHub -->
+    <div class="footer">
+        <a href="https://t.me/InformationFinder" target="_blank"  rel="noopener noreferrer" class="btn btn-telegram" id="btn-telegram">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.25.38-.51 1.07-.78 4.18-1.82 6.97-3.02 8.36-3.6 3.97-1.65 4.8-1.94 5.34-1.95.12 0 .37.03.54.18.14.12.18.28.2.45-.02.07-.02.13-.03.22z"/>
+            </svg>
+            Telegram About
+        </a>
+        <a href="https://github.com/dekoda-uc/PLFinder" target="_blank" rel="noopener noreferrer" class="btn btn-github">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            source github
+        </a>
+    </div>
+
+<script>
+    function log(msg, type = 'info') {
+        const consoleDiv = document.getElementById('console');
+        const line = document.createElement('div');
+        line.className = `log-line log-${type}`;
+        const time = new Date().toLocaleTimeString();
+        line.textContent = `[${time}] ${msg}`;
+        consoleDiv.appendChild(line);
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    function clearConsole() {
+        document.getElementById('console').innerHTML = '';
+    }
+
+    function setLoadingState(isLoading) {
+        const btnSubmit = document.getElementById('btn-submit');
+        const btnUpload = document.getElementById('btn-upload');
+        const inputField = document.getElementById('target');
+
+        if (isLoading) {
+            btnSubmit.disabled = true;
+            btnUpload.disabled = true;
+            inputField.disabled = true;
+            btnSubmit.innerHTML = `<span class="spinner"></span> Processing...`;
+        } else {
+            btnSubmit.disabled = false;
+            btnUpload.disabled = false;
+            inputField.disabled = false;
+            btnSubmit.innerHTML = `Submit`;
+        }
+    }
+
+    function handleM3UUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+            const lines = content.split(/\r?\n/);
+            
+            let foundTarget = null;
+            
+            for (let line of lines) {
+                line = line.trim();
+                if (line && !line.startsWith('#')) {
+                    const match = line.match(/https?:\/\/([^\/\s]+)/);
+                    if (match && match[1]) {
+                        foundTarget = match[1];
+                        break;
+                    }
+                }
+            }
+
+            if (foundTarget) {
+                document.getElementById('target').value = foundTarget;
+                log(`M3U File loaded. Selected target: ${foundTarget}`, 'info');
+                startScan();
+            } else {
+                alert("No valid IP and port found in the M3U file.");
+                log("ERROR: No valid target found in M3U file.", 'error');
+            }
+        };
+
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    async function startScan() {
+        const inputField = document.getElementById('target');
+        const rawTarget = inputField.value.trim();
+
+        if (!rawTarget) {
+            alert("Please enter a valid IP or URL.");
+            return;
+        }
+
+        setLoadingState(true);
+        clearConsole();
+        log(`Analyzing target: ${rawTarget}`, 'info');
+
+        let targetIP = rawTarget.replace(/^https?:\/\//, '').split(':')[0];
+        let targetPort = rawTarget.includes(':') ? rawTarget.split(':')[1] : '8000';
+
+        log(`Running: ips.exe --ip-version 4 ${targetIP}`, 'cmd');
+
+        try {
+            const response = await fetch('/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target: rawTarget })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                log(`ips.exe finished successfully. File generated: output/last_lookup.json`, 'success');
+
+                if (data.lookup_data) {
+                    if (data.lookup_data.org) {
+                        log(`Organization: "${data.lookup_data.org}"`, 'success');
+                    }
+                    log(JSON.stringify(data.lookup_data, null, 2), 'info');
+                }
+
+                log(`Launching l1.exe -ranges output/last_lookup.json -ports ${data.port} -timeout 3 -match Astra -resources "/playlist.m3u8"`, 'cmd');
+                log(`l1.exe started in its own window.`, 'success');
+
+                setTimeout(() => {
+                    log(`\n--- State reset. Ready for a new search ---`, 'info');
+                    setLoadingState(false);
+                    inputField.focus();
+                }, 1000);
+
+            } else {
+                log(`ERROR: ${data.error}`, 'error');
+                setLoadingState(false);
+            }
+        } catch (err) {
+            log(`Internal connection ERROR: ${err.message}`, 'error');
+            setLoadingState(false);
+        }
+    }
+</script>
+</body>
+</html>
