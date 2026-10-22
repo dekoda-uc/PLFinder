@@ -316,7 +316,7 @@
         let targetIP = rawTarget.replace(/^https?:\/\//, '').split(':')[0];
         let targetPort = rawTarget.includes(':') ? rawTarget.split(':')[1] : '8000';
 
-        log(`Running: ips.exe --ip-version 4 ${targetIP}`, 'cmd');
+        log(`Running: asnlookup.exe --ip-version 4 ${targetIP}`, 'cmd');
 
         try {
             const response = await fetch('/api/scan', {
@@ -328,7 +328,7 @@
             const data = await response.json();
 
             if (data.success) {
-                log(`ips.exe finished successfully. File generated: output/last_lookup.json`, 'success');
+                log(`asnlookup.exe finished successfully. File generated: output/last_lookup.json`, 'success');
 
                 if (data.lookup_data) {
                     if (data.lookup_data.org) {
@@ -337,8 +337,8 @@
                     log(JSON.stringify(data.lookup_data, null, 2), 'info');
                 }
 
-                log(`Launching l1.exe -ranges output/last_lookup.json -ports ${data.port} -timeout 3 -match Astra -resources "/playlist.m3u8"`, 'cmd');
-                log(`l1.exe started in its own window.`, 'success');
+                log(`Launching reconhound.exe -ranges output/last_lookup.json -ports ${data.port} -timeout 3 -match Astra -resources "/playlist.m3u8"`, 'cmd');
+                log(`reconhound.exe started in its own window.`, 'success');
 
                 setTimeout(() => {
                     log(`\n--- State reset. Ready for a new search ---`, 'info');

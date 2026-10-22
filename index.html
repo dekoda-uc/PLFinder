@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLfinder - Playlist Scanner</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 30px 15px;
+        }
+
+        .container {
+            max-width: 780px;
+            margin: 0 auto;
+        }
+
+        header {
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            color: #f0f6fc;
+            font-size: 1.8rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .tag {
+            font-size: 11px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        p.desc {
+            color: #8b949e;
+            margin-top: 6px;
+        }
+
+        section {
+            margin-bottom: 28px;
+        }
+
+        h2 {
+            color: #58a6ff;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        a.btn {
+            display: inline-block;
+            padding: 8px 14px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 6px;
+            border: 1px solid;
+            cursor: pointer;
+        }
+
+        .btn-dl {
+            background-color: #238636;
+            border-color: rgba(240,246,252,0.1);
+            color: #ffffff;
+        }
+
+        .btn-dl:hover {
+            background-color: #2ea043;
+        }
+
+        .btn-vt {
+            background-color: #21262d;
+            border-color: #30363d;
+            color: #c9d1d9;
+        }
+
+        .btn-vt:hover {
+            background-color: #30363d;
+            border-color: #8b949e;
+        }
+
+        .code-block {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: #e6edf3;
+            overflow-x: auto;
+        }
+
+        ul {
+            list-style: none;
+            margin-top: 8px;
+        }
+
+        ul li {
+            position: relative;
+            padding-left: 18px;
+            margin-bottom: 4px;
+            color: #8b949e;
+        }
+
+        ul li::before {
+            content: ">";
+            position: absolute;
+            left: 0;
+            color: #58a6ff;
+        }
+
+        ul li code {
+            color: #f0f6fc;
+            background: #161b22;
+            padding: 2px 4px;
+            border-radius: 3px;
+            border: 1px solid #30363d;
+        }
+
+        .video-box {
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #161b22;
+            margin-top: 10px;
+        }
+
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+        }
+
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .disclaimer {
+            border-left: 2px solid #d29922;
+            background: #161b22;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        footer {
+            border-top: 1px solid #30363d;
+            padding-top: 16px;
+            color: #484f58;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        footer a {
+            color: #8b949e;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: #58a6ff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>PLfinder</h1>
+            <span class="tag">v1.0.0-beta.1 (x64)</span>
+            <p class="desc">CLI / WebUI scanner for detecting exposed Cesbo Astra playlists.</p>
+        </header>
+
+        <section>
+            <h2>Download Binaries</h2>
+            <p style="color: #8b949e; font-size: 13px;">Precompiled package for Windows x64. Includes auxiliary executables.</p>
+            <div class="actions">
+                <a href="https://github.com/dekoda-uc/PLFinder/releases/download/v1.0.0-beta.1/PLfinder-v1.0.0-x64.zip" class="btn btn-dl">
+                    Download PLfinder (.zip)
+                </a>
+                <a href="https://www.virustotal.com/gui/file/d183e8c99547785d015dbb774f162f2042243b5af3e2c2fe3fcaefe8ec87b041" target="_blank" rel="noopener noreferrer" class="btn btn-vt">
+                    VirusTotal Analysis
+                </a>
+            </div>
+        </section>
+
+        <section>
+            <h2>Directory Structure</h2>
+            <p style="color: #8b949e; margin-bottom: 8px;">For the scanner to function properly, all three binaries must remain in the same directory:</p>
+            <div class="code-block">
+                <ul>
+                    <li><code>PLfinder.exe</code> — Main interface and orchestrator</li>
+                    <li><code>asnlookup.exe</code> — Network range resolution via ASN / IPv4</li>
+                    <li><code>reconhound.exe</code> — Port and header scanning engine</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>Execution Demo</h2>
+            <div class="video-box">
+                <div class="video-wrapper">
+                    <iframe src="https://www.youtube.com/embed/" allowfullscreen></iframe>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="disclaimer">
+                <strong>Ethical Use Disclaimer:</strong> This tool was created solely for research, self-auditing, and network diagnostic purposes. Do not execute it against infrastructure without explicit prior authorization.
+            </div>
+        </section>
+
+        <footer>
+            <span>PLfinder Project — MIT License</span>
+            <span><a href="https://github.com/dekoda-uc/PLFinder" target="_blank">GitHub Repository</a></span>
+        </footer>
+    </div>
+
+</body>
+</html>
