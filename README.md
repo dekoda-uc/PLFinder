@@ -30,7 +30,3 @@ To start the application:
 ```
 
 ---
-
-## Legal Disclaimer and Ethical Use
-
-This tool was developed **solely for educational, research, and security auditing purposes**.

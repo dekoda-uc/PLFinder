@@ -16,17 +16,21 @@
   const toast = $("toast");
   const progressFill = $("progressFill");
   const statTotalWrap = $("statTotalWrap");
+  const rowFilter = $("rowFilter");
 
   const modal = $("resourceModal");
   const modalTitle = $("modalTitle");
   const modalMeta = $("modalMeta");
+  const modalLink = $("modalLink");
+  const modalLinkText = $("modalLinkText");
+  const modalCopyLink = $("modalCopyLink");
   const modalBody = $("modalBody");
   const modalClose = $("modalClose");
   const modalSave = $("modalSave");
 
   let paused = false;
   let rowCount = 0;
-  let modalCurrent = null; // {id, path}
+  let modalCurrent = null; // {id, path, url}
 
   function showToast(msg) {
     toast.textContent = msg;
@@ -91,6 +95,7 @@
       const chip = document.createElement("span");
       chip.className = "res-chip";
       if (info.ok) chip.classList.add("ok");
+      if (info.typeMismatch || info.looksGeneric) chip.classList.add("mismatch");
 
       const pathSpan = document.createElement("span");
       pathSpan.className = "res-path";
@@ -102,11 +107,26 @@
 
       chip.append(pathSpan, statusSpan);
 
-      // The "View resource" button only shows up if the resource exists (OK status)
+      if (info.typeMismatch) {
+        const warn = document.createElement("span");
+        warn.className = "res-warn";
+        warn.textContent = "⚠ wrong type";
+        warn.title = `Got status ${info.status} but the content-type (${info.contentType || "?"}) doesn't match what a "${path}" should return — likely a login/error/catch-all page, not the real resource.`;
+        chip.appendChild(warn);
+      } else if (info.looksGeneric) {
+        const warn = document.createElement("span");
+        warn.className = "res-warn";
+        warn.textContent = "⚠ looks generic";
+        warn.title = `Got status ${info.status} with a plausible content-type, but the response is identical to what this host returns for a path that doesn't exist — likely a login redirect, SPA catch-all, or soft-404, not the real "${path}".`;
+        chip.appendChild(warn);
+      }
+
+      // The "View resource" button only shows up if the resource genuinely
+      // exists (OK status, right content-type, and not the generic catch-all response)
       if (info.ok && info.hasBody) {
         const viewBtn = document.createElement("button");
         viewBtn.textContent = "View resource";
-        viewBtn.addEventListener("click", () => viewResource(res.id, path));
+        viewBtn.addEventListener("click", () => viewResource(res, path));
         chip.appendChild(viewBtn);
       }
 
@@ -127,8 +147,12 @@
     row.dataset.scheme = res.scheme || "";
     if (res.serverMatch && res.resourceHit) {
       row.classList.add("match-both"); // server match AND resource found: strong color
+      row.dataset.tier = "both";
     } else if (res.serverMatch || res.resourceHit) {
       row.classList.add("match-partial"); // only one of the two: lighter color
+      row.dataset.tier = "any";
+    } else {
+      row.dataset.tier = "none";
     }
 
     const cellSel = document.createElement("div");
@@ -173,11 +197,42 @@
 
     row.append(cellSel, cellIp, cellPort, cellScheme, cellServer, cellMatch, cellRes);
     resultsBody.appendChild(row);
+    applyRowFilter(row);
   }
+
+  // ---------- Results filter (All / Matched any / Matched both) ----------
+  function applyRowFilter(row) {
+    const filter = rowFilter.value; // "all" | "any" | "both"
+    const tier = row.dataset.tier; // "none" | "any" | "both"
+    let visible = true;
+    if (filter === "any") visible = tier === "any" || tier === "both";
+    else if (filter === "both") visible = tier === "both";
+    row.style.display = visible ? "" : "none";
+  }
+
+  function applyFilterToAllRows() {
+    document.querySelectorAll("#resultsBody .results-row").forEach(applyRowFilter);
+    updateEmptyMessageForFilter();
+  }
+
+  function updateEmptyMessageForFilter() {
+    if (rowCount === 0) return; // the "no results yet" message already handles this case
+    const anyVisible = Array.from(document.querySelectorAll("#resultsBody .results-row"))
+      .some((r) => r.style.display !== "none");
+    if (anyVisible) {
+      emptyMsg.style.display = "none";
+    } else {
+      emptyMsg.textContent = "No rows match the current filter.";
+      emptyMsg.style.display = "block";
+    }
+  }
+
+  rowFilter.addEventListener("change", applyFilterToAllRows);
 
   function clearTable() {
     resultsBody.innerHTML = "";
     rowCount = 0;
+    emptyMsg.textContent = 'No results yet. Configure the scan and click "Start search".';
     emptyMsg.style.display = "block";
   }
 
@@ -210,7 +265,9 @@
     return ext ? ext.toUpperCase() : "DATA";
   }
 
-  async function viewResource(id, path) {
+  async function viewResource(res, path) {
+    const id = res.id;
+    const directUrl = `${res.scheme || "http"}://${res.ip}:${res.port}${path}`;
     const url = `/api/resource-content?id=${id}&path=${encodeURIComponent(path)}`;
     let resp;
     try {
@@ -249,8 +306,11 @@
       (truncated ? " · (content truncated to 1 MiB)" : "");
     modalMeta.appendChild(metaText);
 
+    modalLinkText.textContent = directUrl;
+    modalLinkText.href = directUrl;
+
     modalBody.innerHTML = "";
-    modalCurrent = { id, path };
+    modalCurrent = { id, path, url: directUrl };
 
     const pre = document.createElement("pre");
     const code = document.createElement("code");
@@ -260,6 +320,16 @@
 
     openModal();
   }
+
+  modalCopyLink.addEventListener("click", async () => {
+    if (!modalCurrent) return;
+    try {
+      await navigator.clipboard.writeText(modalCurrent.url);
+      showToast("Link copied to clipboard");
+    } catch (e) {
+      showToast("Could not copy (browser permission)");
+    }
+  });
 
   modalSave.addEventListener("click", () => {
     if (!modalCurrent) return;

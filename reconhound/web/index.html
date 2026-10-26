@@ -65,6 +65,14 @@
   </div>
 
   <div class="panel results">
+    <div class="results-toolbar">
+      <label for="rowFilter">Show</label>
+      <select id="rowFilter">
+        <option value="all" selected>All results</option>
+        <option value="any">Matched (server or resource)</option>
+        <option value="both">Matched (server + resource)</option>
+      </select>
+    </div>
     <div class="results-header" role="row">
       <div class="rcell"><input id="selAll" type="checkbox" title="Select all"></div>
       <div class="rcell">IP</div>
@@ -101,6 +109,11 @@
         </div>
       </div>
       <div id="modalMeta" class="modal-meta"></div>
+      <div id="modalLink" class="modal-link">
+        <span>Direct link:</span>
+        <a id="modalLinkText" href="#" target="_blank" rel="noopener"></a>
+        <button id="modalCopyLink" class="btn btn-small">Copy link</button>
+      </div>
       <div id="modalBody" class="modal-body"></div>
     </div>
   </div>

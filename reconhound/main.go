@@ -11,10 +11,13 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
 	"embed"
 	"encoding/binary"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -186,12 +189,14 @@ type ScanConfig struct {
 }
 
 type ResourceInfo struct {
-	Status      int    `json:"status"`
-	ContentType string `json:"contentType,omitempty"`
-	Size        int    `json:"size"`
-	Truncated   bool   `json:"truncated,omitempty"`
-	HasBody     bool   `json:"hasBody"`
-	OK          bool   `json:"ok"` // true if the status is among the configured "OK codes"
+	Status       int    `json:"status"`
+	ContentType  string `json:"contentType,omitempty"`
+	Size         int    `json:"size"`
+	Truncated    bool   `json:"truncated,omitempty"`
+	HasBody      bool   `json:"hasBody"`
+	OK           bool   `json:"ok"`                     // true only if the status is OK, the content-type matches the extension, AND the response isn't identical to the host's baseline (not-found) response
+	TypeMismatch bool   `json:"typeMismatch,omitempty"` // got an OK status, but the content-type doesn't match (e.g. a .css request answered with an HTML login/error page)
+	LooksGeneric bool   `json:"looksGeneric,omitempty"` // got an OK status, right content-type, but the response is byte-identical to a known-nonexistent path on the same host (soft-404 / login redirect / SPA catch-all)
 }
 
 type ScanResult struct {
@@ -895,6 +900,123 @@ func (s *Server) runScan(ctx context.Context, cfg ScanConfig) {
 // scanJob tries to open the TCP connection and, if applicable, makes
 // HTTP requests to get the Server header and download (size-limited)
 // the content of the requested resources.
+// extContentTypes maps a resource's file extension to the substrings its
+// real Content-Type should contain. Used to catch the common case where a
+// site answers EVERY path with HTTP 200 (a login page, an SPA catch-all, a
+// custom "not found" page that doesn't bother with a 404) — so a request
+// for a .css file comes back as text/html instead of text/css. Extensions
+// not in this map aren't validated (status code alone decides).
+var extContentTypes = map[string][]string{
+	".css":   {"css"},
+	".js":    {"javascript"},
+	".mjs":   {"javascript"},
+	".json":  {"json"},
+	".xml":   {"xml"},
+	".txt":   {"text/plain"},
+	".html":  {"html"},
+	".htm":   {"html"},
+	".png":   {"image/png"},
+	".jpg":   {"image/jpeg"},
+	".jpeg":  {"image/jpeg"},
+	".gif":   {"image/gif"},
+	".svg":   {"svg"},
+	".webp":  {"image/webp"},
+	".ico":   {"image/"},
+	".woff":  {"woff"},
+	".woff2": {"woff2"},
+	".ttf":   {"font", "x-font-ttf"},
+	".pdf":   {"application/pdf"},
+	".zip":   {"zip"},
+	".mp4":   {"video/mp4"},
+	".mp3":   {"audio/"},
+}
+
+// extOf returns the lowercase file extension of a URL path (ignoring any
+// query string), or "" if there isn't one.
+func extOf(p string) string {
+	if i := strings.IndexByte(p, '?'); i >= 0 {
+		p = p[:i]
+	}
+	dot := strings.LastIndexByte(p, '.')
+	slash := strings.LastIndexByte(p, '/')
+	if dot < 0 || dot < slash {
+		return ""
+	}
+	return strings.ToLower(p[dot:])
+}
+
+// contentTypeMatchesExt checks the actual Content-Type against what the
+// resource's extension would normally return. Unrecognized extensions (or
+// paths without one) are always considered a match, since there's nothing
+// to validate against.
+func contentTypeMatchesExt(resPath, contentType string) bool {
+	expected, ok := extContentTypes[extOf(resPath)]
+	if !ok {
+		return true
+	}
+	ctLower := strings.ToLower(contentType)
+	for _, e := range expected {
+		if strings.Contains(ctLower, e) {
+			return true
+		}
+	}
+	return false
+}
+
+// randomProbeToken returns a short random hex string, used to build a probe
+// path that can't plausibly already exist on the target.
+func randomProbeToken() string {
+	buf := make([]byte, 8)
+	if _, err := rand.Read(buf); err != nil {
+		return "reconhound0000"
+	}
+	return hex.EncodeToString(buf)
+}
+
+type baselineResponse struct {
+	has    bool
+	status int
+	size   int
+	hash   string
+}
+
+// fetchBaseline requests a path on the host that is essentially guaranteed
+// not to exist, so its response works as a fingerprint of whatever the
+// server answers for "not found" — whether that's a real 404, or (very
+// commonly) an HTTP 200 with a login page, a single-page-app's catch-all
+// index.html, or a custom "nothing here" page. Resource checks are later
+// compared against this fingerprint to avoid reporting that generic page
+// as if it were the real resource.
+func fetchBaseline(ctx context.Context, client *http.Client, base string) baselineResponse {
+	probePath := "/reconhound-probe-" + randomProbeToken()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+probePath, nil)
+	if err != nil {
+		return baselineResponse{}
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; reconHound/1.0)")
+	resp, err := client.Do(req)
+	if err != nil {
+		return baselineResponse{}
+	}
+	data, _ := io.ReadAll(io.LimitReader(resp.Body, maxBodyBytes+1))
+	resp.Body.Close()
+	sum := sha256.Sum256(data)
+	return baselineResponse{has: true, status: resp.StatusCode, size: len(data), hash: hex.EncodeToString(sum[:])}
+}
+
+// looksLikeBaseline reports whether a resource's response is indistinguishable
+// from the host's baseline "doesn't exist" response (same status, same size,
+// same content) — i.e. the server answered the same way it would for any
+// made-up path, so this isn't a genuine find even though the status code
+// might be "OK".
+func looksLikeBaseline(bl baselineResponse, status int, data []byte) bool {
+	if !bl.has || status != bl.status || len(data) != bl.size {
+		return false
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:]) == bl.hash
+}
+
 func scanJob(ctx context.Context, job Job, cfg scanEngineConfig) (ScanResult, map[string][]byte, bool) {
 	result := ScanResult{IP: job.IP, Port: job.Port, Resources: map[string]ResourceInfo{}}
 	bodies := map[string][]byte{}
@@ -941,9 +1063,20 @@ func scanJob(ctx context.Context, job Job, cfg scanEngineConfig) (ScanResult, ma
 			}
 		}
 
+		if len(cfg.resources) == 0 {
+			continue
+		}
+
+		// Fetched once per scheme and reused for every resource on this host:
+		// tells us what this server answers for a path that can't exist, so
+		// we can tell a genuine resource apart from a generic catch-all page
+		// (login redirect, SPA fallback, soft-404...) that happens to return
+		// an "OK" status and even a plausible-looking content-type.
+		baseline := fetchBaseline(ctx, client, base)
+
 		for _, resPath := range cfg.resources {
-			if existing, ok := result.Resources[resPath]; ok && cfg.okCodes[existing.Status] {
-				continue // already found on a previous scheme
+			if existing, ok := result.Resources[resPath]; ok && existing.OK {
+				continue // already genuinely found on a previous scheme
 			}
 			rreq, err := http.NewRequestWithContext(ctx, http.MethodGet, base+resPath, nil)
 			if err != nil {
@@ -966,13 +1099,20 @@ func scanJob(ctx context.Context, job Job, cfg scanEngineConfig) (ScanResult, ma
 			if ct == "" {
 				ct = http.DetectContentType(data)
 			}
+
+			statusOK := cfg.okCodes[rresp.StatusCode]
+			typeOK := contentTypeMatchesExt(resPath, ct)
+			generic := statusOK && typeOK && looksLikeBaseline(baseline, rresp.StatusCode, data)
+
 			result.Resources[resPath] = ResourceInfo{
-				Status:      rresp.StatusCode,
-				ContentType: ct,
-				Size:        len(data),
-				Truncated:   truncated,
-				HasBody:     true,
-				OK:          cfg.okCodes[rresp.StatusCode],
+				Status:       rresp.StatusCode,
+				ContentType:  ct,
+				Size:         len(data),
+				Truncated:    truncated,
+				HasBody:      true,
+				OK:           statusOK && typeOK && !generic,
+				TypeMismatch: statusOK && !typeOK,
+				LooksGeneric: generic,
 			}
 			bodies[resPath] = data
 		}
